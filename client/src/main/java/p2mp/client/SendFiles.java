@@ -1,4 +1,4 @@
-package ip_p2mp_ftp.client;
+package p2mp.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -109,17 +109,33 @@ public class SendFiles implements Runnable {
 
 		byte[] segmentArray = convertObjectToByteArray(segment);
 
-		for (String s : SendFiles.ackMap.get((long) segmentNo)) {
+		for (String s : SendFiles.ackMap.get(segmentNo)) {
 			DatagramPacket dataPacket = new DatagramPacket(segmentArray, segmentArray.length, InetAddress.getByName(s),
 					this.port);
 			this.socket.send(dataPacket);
-			SendFiles.ackMap.get((long) segmentNo).add(s);
+			SendFiles.ackMap.get(segmentNo).add(s);
 		}
 	}
 
+	/**
+	 * Below code is courtesy of
+	 * https://stackoverflow.com/questions/13209364/convert-c-crc16-to-java-crc16
+	 */
 	private byte[] calculateChecksum(byte[] data) {
 
-		return null;
+		int crc = 0xFFFF;
+
+		for (int j = 0; j < data.length; j++) {
+			crc = ((crc >>> 8) | (crc << 8)) & 0xffff;
+			crc ^= (data[j] & 0xff);// byte to int, trunc sign
+			crc ^= ((crc & 0xff) >> 4);
+			crc ^= (crc << 12) & 0xffff;
+			crc ^= ((crc & 0xFF) << 5) & 0xffff;
+		}
+		crc &= 0xffff;
+
+		return ByteBuffer.allocate(2).putInt(crc).array();
+
 	}
 
 	public static byte[] convertObjectToByteArray(Object packet) throws IOException {

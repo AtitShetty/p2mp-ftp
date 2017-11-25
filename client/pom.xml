@@ -2,7 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>p2mp_ftp</groupId>
+	<groupId>p2mp</groupId>
 	<artifactId>client</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
@@ -45,7 +45,7 @@
 							<archive>
 								<manifest>
 									<mainClass>
-										org.p2p.central.App
+										p2mp.client.Main
 									</mainClass>
 									<addClasspath>true</addClasspath>
 								</manifest>

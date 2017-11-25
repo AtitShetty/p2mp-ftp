@@ -1,4 +1,4 @@
-package ip_p2mp_ftp.client;
+package p2mp.client;
 
 import java.io.Serializable;
 
