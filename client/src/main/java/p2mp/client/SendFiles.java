@@ -59,6 +59,7 @@ public class SendFiles implements Runnable {
 		try {
 			FileInputStream is = new FileInputStream(Paths.get(this.fileName).toString());
 			byte[] buffer = new byte[this.mss];
+			@SuppressWarnings("unused")
 			int remaining = 0;
 			int segmentNo = 0;
 
@@ -78,7 +79,7 @@ public class SendFiles implements Runnable {
 						Thread.sleep(this.timeout);
 					} catch (InterruptedException e) {
 						System.out.println("All Acks Received.");
-						SendFiles.ackMap.remove((long) segmentNo);
+						SendFiles.ackMap.remove(segmentNo);
 						break;
 					}
 
@@ -86,7 +87,7 @@ public class SendFiles implements Runnable {
 				segmentNo += 1;
 
 			}
-
+			is.close();
 		} catch (Exception e) {
 			System.out
 					.println("Exception while sending file in SendFiles run():\n" + Arrays.toString(e.getStackTrace()));
