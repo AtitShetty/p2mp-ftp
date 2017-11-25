@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,9 +24,41 @@ public class SendFiles implements Runnable {
 	protected static Map<Integer, Set<String>> ackMap = Collections
 			.synchronizedMap(new HashMap<Integer, Set<String>>());
 
-	public static final String DATA_PACKET = "0101010101010101";
+	public static final BitSet DATA_PACKET = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 5509594355442936364L;
 
-	public static final String ACK_PACKET = "1010101010101010";
+		{
+			set(0);
+			set(2);
+			set(4);
+			set(6);
+			set(8);
+			set(10);
+			set(12);
+			set(14);
+		}
+	};
+
+	public static final BitSet ACK_PACKET = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -1075747658132666370L;
+
+		{
+			set(1);
+			set(3);
+			set(5);
+			set(7);
+			set(9);
+			set(11);
+			set(13);
+			set(15);
+		}
+	};
 
 	protected DatagramSocket socket;
 
@@ -103,7 +136,7 @@ public class SendFiles implements Runnable {
 		System.out.println("Sending packet: " + segmentNo);
 
 		byte[] segmentNumber = ByteBuffer.allocate(4).putInt(segmentNo).array();
-		byte[] packetType = ByteBuffer.allocate(2).putShort(Short.parseShort(DATA_PACKET, 2)).array();
+		byte[] packetType = DATA_PACKET.toByteArray();
 		byte[] checksum = calculateChecksum(data);
 
 		Packet segment = new Packet(segmentNumber, checksum, packetType, data);

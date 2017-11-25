@@ -3,7 +3,6 @@ package p2mp.client;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -21,7 +20,7 @@ public class Main {
 		int port = Integer.parseInt(args[argsSize - 3]);
 		String fileName = args[argsSize - 2];
 		int mss = Integer.parseInt(args[argsSize - 1]);
-		System.out.println(Arrays.toString(args));
+		// System.out.println(Arrays.toString(args));
 		
 		for (int i = argsSize - 4; i >= 0; i--) {
 			

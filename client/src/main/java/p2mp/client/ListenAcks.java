@@ -4,6 +4,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.BitSet;
 
 public class ListenAcks implements Runnable {
 
@@ -23,8 +24,6 @@ public class ListenAcks implements Runnable {
 	public void run() {
 		System.out.println("ListenAcks thread started");
 
-		Short packetTypeAck = Short.parseShort(SendFiles.ACK_PACKET, 2);
-
 		while (true) {
 			try {
 				byte[] buffer = new byte[2048];
@@ -33,9 +32,9 @@ public class ListenAcks implements Runnable {
 
 				Packet ackResponse = (Packet) SendFiles.convertByteArrayToObject(response.getData());
 
-				Short packetType = Short.valueOf(ByteBuffer.allocate(ackResponse.packetType.length).getShort());
+				BitSet packetType = BitSet.valueOf(ackResponse.packetType);
 
-				if (packetType == packetTypeAck) {
+				if (packetType.equals(SendFiles.ACK_PACKET)) {
 					int ackNo = Integer.valueOf(ByteBuffer.allocate(ackResponse.sequenceNo.length).getInt());
 
 					String serverName = response.getAddress().getHostAddress();
