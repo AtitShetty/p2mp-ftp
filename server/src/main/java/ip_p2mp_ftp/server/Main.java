@@ -8,11 +8,11 @@ public class Main {
 		for(String arg: args){
 			System.out.println(arg);
 		}
-		if (args.length != 4) {
+		if (args.length != 3) {
 			throw new Exception("Check input format");
 		}
 
-		Server server = new Server(Integer.parseInt(args[1]), args[2], Double.parseDouble(args[3]));
+		Server server = new Server(Integer.parseInt(args[0]), args[1], Double.parseDouble(args[2]));
 		server.start();
 	}
 }
