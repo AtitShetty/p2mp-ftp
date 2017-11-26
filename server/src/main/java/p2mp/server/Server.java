@@ -19,11 +19,10 @@ import p2mp.shared.Packet;
 
 public class Server extends Thread {
 	private DatagramSocket socket;
-	private InetAddress address;
-	private int port;
-	private static double p;
+	// private InetAddress address;
+	// private int port;
+	private double p;
 	private int curSequence = -1;
-	private String nextSequence;
 	public static final BitSet DATA_PACKET = new BitSet(16) {
 		/**
 		 * 
@@ -73,7 +72,6 @@ public class Server extends Thread {
 	protected String fileName;
 
 	public Server(int port, String fileName, double p) throws SocketException {
-		this.port = port;
 		this.socket = new DatagramSocket(port);
 		this.fileName = fileName;
 		this.p = p;
@@ -91,9 +89,9 @@ public class Server extends Thread {
 
 				this.socket.receive(packet);
 				double r = Math.random();
-				// if (r > p) {
+				if (r > this.p) {
 					rcv_data(packet);
-				// }
+				}
 			} catch (Exception e) {
 				System.out.println(e.getMessage());
 			}
