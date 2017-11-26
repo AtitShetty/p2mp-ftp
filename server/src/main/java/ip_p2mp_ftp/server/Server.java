@@ -26,9 +26,11 @@ public class Server extends Thread {
 	protected String fileName;
 
 
-	public Server(String fileName) throws SocketException {
-		socket = new DatagramSocket(7735);
+	public Server(int port, String fileName, double p) throws SocketException {
+		this.port = port;
+		socket = new DatagramSocket(port);
 		this.fileName = fileName;
+		this.p = p;
 	}
 
 	public void run() {
