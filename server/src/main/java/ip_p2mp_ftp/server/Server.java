@@ -19,12 +19,12 @@ public class Server extends Thread {
 	private InetAddress address;
 	private int port;
 	private static double p;
-	private String sequence;
+	private String curSequence;
+	private String nextSequence;
 	private static final String ACK_PACKET = "1010101010101010";
 	private static final String DATA_PACKET = "0101010101010101";
-	private static final String ACK_CHECKSUM = "0000000000000000";	
+	private static final String ACK_CHECKSUM = "0000000000000000";
 	protected String fileName;
-
 
 	public Server(int port, String fileName, double p) throws SocketException {
 		this.port = port;
@@ -34,26 +34,29 @@ public class Server extends Thread {
 	}
 
 	public void run() {
-		try {
-			while (true) {
-				DatagramPacket packet = new DatagramPacket(new byte[256], 256);
-				this.socket.receive(packet);
 
+		System.out.println("ListenAcks thread started");
+
+		while (true) {
+			try {
+				byte[] buffer = new byte[2048];
+				DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+				this.socket.receive(packet);
 				address = packet.getAddress();
 				port = packet.getPort();
-				String request = new String(packet.getData(), 0, packet.getLength());
-				System.out.println(request);
-				String response = "Received:" + request;
-				socket.send(new DatagramPacket(response.getBytes(), response.getBytes().length, address, port));
+				double r = Math.random();
+				if (r > p) {
+					rcv_data(packet);
+				}
+			} catch (Exception e) {
+				System.out.println(e.getMessage());
 			}
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
 		}
 	}
 
 	private void send_ack() {
 		try {
-			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(Integer.parseInt(sequence, 2)).array();
+			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(Integer.parseInt(curSequence, 2)).array();
 			byte[] chksum = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_CHECKSUM, 2)).array();
 			byte[] packetType = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_PACKET, 2)).array();
 			Packet ack = new Packet(sequenceNo, chksum, packetType);
@@ -67,36 +70,30 @@ public class Server extends Thread {
 
 	private void rcv_data(DatagramPacket packet) {
 		try {
-			double r = Math.random();
-			if(r>p){
-				byte[] buffer = new byte[2048];
-				DatagramPacket response = new DatagramPacket(buffer, buffer.length);
-				this.socket.receive(response);
-				Packet filepacket = (Packet) convertByteArrayToObject(response.getData());
-				
-				if(new String(filepacket.sequenceNo).equals(sequence)){
+			Packet filepacket = (Packet) convertByteArrayToObject(packet.getData());
+
+			if (new String(filepacket.sequenceNo).equals(curSequence)) {
+				send_ack();
+				return;
+			}
+
+			Short packetType = Short.valueOf(ByteBuffer.allocate(filepacket.packetType.length).getShort());
+			Short datatype = Short.parseShort(DATA_PACKET);
+			if (packetType == datatype) {
+				String checkChk = new String(calculateChecksum(filepacket.data));
+				String Chk = new String(filepacket.checksum);
+				if (Chk.equals(checkChk)) {
+					curSequence = new String(filepacket.sequenceNo);
+					FileOutputStream os = new FileOutputStream(Paths.get(this.fileName).toString());
+					os.write(filepacket.data);
 					send_ack();
-					return;
-				}
-				
-				Short packetType = Short.valueOf(ByteBuffer.allocate(filepacket.packetType.length).getShort());
-				Short datatype = Short.parseShort(DATA_PACKET);
-				if (packetType == datatype) {
-					String checkChk = new String(calculateChecksum(filepacket.data));
-					String Chk = new String(filepacket.checksum);
-					if(Chk.equals(checkChk)){
-						sequence = new String(filepacket.sequenceNo);
-						FileOutputStream os = new FileOutputStream(Paths.get(this.fileName).toString());
-						os.write(filepacket.data);
-						send_ack();
-					}
 				}
 			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 	}
-	
+
 	/**
 	 * Below code is courtesy of
 	 * https://stackoverflow.com/questions/13209364/convert-c-crc16-to-java-crc16
@@ -117,7 +114,7 @@ public class Server extends Thread {
 		return ByteBuffer.allocate(2).putInt(crc).array();
 
 	}
-	
+
 	public static byte[] convertObjectToByteArray(Object packet) throws IOException {
 
 		byte[] result = null;
