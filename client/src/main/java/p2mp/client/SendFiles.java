@@ -90,8 +90,8 @@ public class SendFiles implements Runnable {
 
 	public void run() {
 
-		System.out.println("SendFiles thread started");
-		System.out.println(Paths.get(this.fileName).toString());
+		System.out.println("Client started");
+		// System.out.println(Paths.get(this.fileName).toString());
 		try {
 			FileInputStream is = new FileInputStream(Paths.get(this.fileName).toString());
 			byte[] buffer = new byte[this.mss];
@@ -107,8 +107,7 @@ public class SendFiles implements Runnable {
 
 			while ((remaining = is.read(buffer)) != -1) {
 
-				SendFiles.ackMap.put(segmentNo,
-						Collections.synchronizedSet(new HashSet<String>(serverIpAddresses)));
+				SendFiles.ackMap.put(segmentNo, Collections.synchronizedSet(new HashSet<String>(serverIpAddresses)));
 				while (true) {
 					sendPacketsToServers(buffer, segmentNo);
 					try {
@@ -118,6 +117,7 @@ public class SendFiles implements Runnable {
 						SendFiles.ackMap.remove(segmentNo);
 						break;
 					}
+					System.out.println("Timeout, sequence number = " + segmentNo);
 
 				}
 				segmentNo += 1;
@@ -129,7 +129,7 @@ public class SendFiles implements Runnable {
 					.println("Exception while sending file in SendFiles run():\n" + Arrays.toString(e.getStackTrace()));
 		} finally {
 			SendFiles.ackMap.clear();
-			System.out.println("Thread SendFiles closed");
+			System.out.println("File sent successfully.");
 		}
 
 	}
@@ -169,7 +169,6 @@ public class SendFiles implements Runnable {
 			crc ^= ((crc & 0xFF) << 5) & 0xffff;
 		}
 		crc &= 0xffff;
-
 
 		return ByteBuffer.allocate(4).putInt(crc).array();
 

@@ -24,7 +24,7 @@ public class ListenAcks implements Runnable {
 	}
 
 	public void run() {
-		System.out.println("ListenAcks thread started");
+		// System.out.println("ListenAcks thread started");
 
 		while (true) {
 			try {
@@ -43,9 +43,9 @@ public class ListenAcks implements Runnable {
 
 					SendFiles.ackMap.get(ackNo).remove(serverName);
 
-					System.out.println("Acked received for packet " + ackNo + " from " + serverName);
+					System.out.println("ACK received for packet " + ackNo + " from " + serverName);
 
-					System.out.println("Acks waiting from " + Arrays.toString(SendFiles.ackMap.get(ackNo).toArray()));
+					System.out.println("ACKs waiting from " + Arrays.toString(SendFiles.ackMap.get(ackNo).toArray()));
 
 					if (SendFiles.ackMap.get(ackNo).isEmpty()) {
 						this.requestThread.interrupt();

@@ -11,7 +11,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.BitSet;
 
@@ -23,6 +22,7 @@ public class Server extends Thread {
 	// private int port;
 	private double p;
 	private int curSequence = -1;
+
 	public static final BitSet DATA_PACKET = new BitSet(16) {
 		/**
 		 * 
@@ -32,7 +32,6 @@ public class Server extends Thread {
 		/**
 		 * 
 		 */
-
 
 		{
 			set(0);
@@ -56,7 +55,6 @@ public class Server extends Thread {
 		 * 
 		 */
 
-
 		{
 			set(1);
 			set(3);
@@ -75,32 +73,36 @@ public class Server extends Thread {
 		this.socket = new DatagramSocket(port);
 		this.fileName = fileName;
 		this.p = p;
+
 	}
 
 	public void run() {
 
-		System.out.println("Server thread started");
-		System.out.println(this.socket.getLocalAddress());
-		System.out.println(this.socket.getLocalPort());
+		System.out.println("Server started\n");
+		// System.out.println(this.socket.getLocalAddress());
+		// System.out.println(this.socket.getLocalPort());
 		while (true) {
 			try {
-				byte[] buffer = new byte[2048];
+				byte[] buffer = new byte[1000000];
 				DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-
 				this.socket.receive(packet);
+				Packet recPacket = (Packet) convertByteArrayToObject(packet.getData());
 				double r = Math.random();
 				if (r > this.p) {
 					rcv_data(packet);
+				} else {
+					System.out.println(
+							"Packet loss, sequence number = " + ByteBuffer.wrap(recPacket.sequenceNo).getInt());
 				}
 			} catch (Exception e) {
-				System.out.println(e.getMessage());
+				System.out.println("Exception while running server:\n" + Arrays.toString(e.getStackTrace()));
 			}
 		}
 	}
 
 	private void send_ack(InetAddress address, int port) {
 		try {
-			System.out.println("Sending ack....");
+			System.out.println("Sending ACK " + curSequence);
 			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(curSequence).array();
 			byte[] chksum = ACK_CHECKSUM.toByteArray();
 			byte[] packetType = ACK_PACKET.toByteArray();
@@ -115,36 +117,36 @@ public class Server extends Thread {
 
 	private void rcv_data(DatagramPacket packet) {
 		try {
-			System.out.println("Receiving data");
+			System.out.println("Data received");
 			Packet filepacket = (Packet) convertByteArrayToObject(packet.getData());
 			InetAddress clientAddress = packet.getAddress();
 			int clientPort = packet.getPort();
-			System.out.println("received seq is"
-					+ ByteBuffer.wrap(filepacket.sequenceNo).getInt());
+			// System.out.println("received seq is"
+			// + ByteBuffer.wrap(filepacket.sequenceNo).getInt());
 			if (ByteBuffer.wrap(filepacket.sequenceNo).getInt() == curSequence) {
 				send_ack(clientAddress, clientPort);
 				return;
 			}
 
 			BitSet packetType = BitSet.valueOf(filepacket.packetType);
-			System.out.println(packetType.toString());
-			System.out.println(DATA_PACKET.toString());
+			// System.out.println(packetType.toString());
+			// System.out.println(DATA_PACKET.toString());
 			if (packetType.equals(DATA_PACKET)) {
-				System.out.println("packetType matched");
+				// System.out.println("packetType matched");
 				String checkChk = new String(calculateChecksum(filepacket.data));
 				String chk = new String(filepacket.checksum);
 				if (chk.equals(checkChk)) {
-					System.out.println("checksum");
+					// System.out.println("checksum");
 					curSequence = ByteBuffer.wrap(filepacket.sequenceNo).getInt();
-					System.out.println("now sequenc is " + curSequence);
-					FileOutputStream os = new FileOutputStream(Paths.get(this.fileName).toString());
+					// System.out.println("now sequenc is " + curSequence);
+					FileOutputStream os = new FileOutputStream(this.fileName, true);
 					os.write(filepacket.data);
-					send_ack(clientAddress, clientPort);
 					os.close();
+					send_ack(clientAddress, clientPort);
 				}
 			}
 		} catch (Exception e) {
-			System.out.println("exception in rcv" + Arrays.toString(e.getStackTrace()));
+			System.out.println("Exception in rcv_data()" + Arrays.toString(e.getStackTrace()));
 		}
 	}
 
