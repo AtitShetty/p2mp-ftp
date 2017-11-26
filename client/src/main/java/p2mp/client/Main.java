@@ -22,7 +22,7 @@ public class Main {
 		int mss = Integer.parseInt(args[argsSize - 1]);
 		// System.out.println(Arrays.toString(args));
 		
-		for (int i = argsSize - 4; i >= 0; i--) {
+		for (int i = argsSize - 4; i > 0; i--) {
 			
 			try {
 				servers.add(InetAddress.getByName(args[i]).getHostAddress());

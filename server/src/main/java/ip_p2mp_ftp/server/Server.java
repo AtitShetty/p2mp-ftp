@@ -35,7 +35,6 @@ public class Server extends Thread {
 
 	public void run() {
 
-		System.out.println("ListenAcks thread started");
 
 		while (true) {
 			try {
@@ -56,6 +55,7 @@ public class Server extends Thread {
 
 	private void send_ack() {
 		try {
+			System.out.println("Sending ack....");
 			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(Integer.parseInt(curSequence, 2)).array();
 			byte[] chksum = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_CHECKSUM, 2)).array();
 			byte[] packetType = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_PACKET, 2)).array();
@@ -70,6 +70,7 @@ public class Server extends Thread {
 
 	private void rcv_data(DatagramPacket packet) {
 		try {
+			System.out.println("Receiving data....");
 			Packet filepacket = (Packet) convertByteArrayToObject(packet.getData());
 
 			if (new String(filepacket.sequenceNo).equals(curSequence)) {
