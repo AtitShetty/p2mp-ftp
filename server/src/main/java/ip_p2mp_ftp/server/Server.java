@@ -2,6 +2,8 @@ package ip_p2mp_ftp.server;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -10,6 +12,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.file.Paths;
 
 public class Server extends Thread {
 	private DatagramSocket socket;
@@ -17,12 +20,15 @@ public class Server extends Thread {
 	private int port;
 	private static double p;
 	private String sequence;
-	public static final String ACK_PACKET = "1010101010101010";
-	public static final String CHECKSUM = "0000000000000000";
+	private static final String ACK_PACKET = "1010101010101010";
+	private static final String DATA_PACKET = "0101010101010101";
+	private static final String ACK_CHECKSUM = "0000000000000000";	
+	protected String fileName;
 
 
-	public Server() throws SocketException {
+	public Server(String fileName) throws SocketException {
 		socket = new DatagramSocket(7735);
+		this.fileName = fileName;
 	}
 
 	public void run() {
@@ -43,10 +49,10 @@ public class Server extends Thread {
 		}
 	}
 
-	private void send_ack(int s) {
+	private void send_ack() {
 		try {
 			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(Integer.parseInt(sequence, 2)).array();
-			byte[] chksum = ByteBuffer.allocate(2).putShort(Short.parseShort(CHECKSUM, 2)).array();
+			byte[] chksum = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_CHECKSUM, 2)).array();
 			byte[] packetType = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_PACKET, 2)).array();
 			Packet ack = new Packet(sequenceNo, chksum, packetType);
 			byte[] send_ack = convertObjectToByteArray(ack);
@@ -60,20 +66,54 @@ public class Server extends Thread {
 	private void rcv_data(DatagramPacket packet) {
 		try {
 			double r = Math.random();
-			/*if(r>p){
+			if(r>p){
 				byte[] buffer = new byte[2048];
 				DatagramPacket response = new DatagramPacket(buffer, buffer.length);
 				this.socket.receive(response);
-
-				Packet ackResponse = (Packet) SendFiles.convertByteArrayToObject(response.getData());
-
-				Short packetType = Short.valueOf(ByteBuffer.allocate(ackResponse.packetType.length).getShort());
-
-				if (packetType == packetTypeAck) {
-			}*/
+				Packet filepacket = (Packet) convertByteArrayToObject(response.getData());
+				
+				if(new String(filepacket.sequenceNo).equals(sequence)){
+					send_ack();
+					return;
+				}
+				
+				Short packetType = Short.valueOf(ByteBuffer.allocate(filepacket.packetType.length).getShort());
+				Short datatype = Short.parseShort(DATA_PACKET);
+				if (packetType == datatype) {
+					String checkChk = new String(calculateChecksum(filepacket.data));
+					String Chk = new String(filepacket.checksum);
+					if(Chk.equals(checkChk)){
+						sequence = new String(filepacket.sequenceNo);
+						FileOutputStream os = new FileOutputStream(Paths.get(this.fileName).toString());
+						os.write(filepacket.data);
+						send_ack();
+					}
+				}
+			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
+	}
+	
+	/**
+	 * Below code is courtesy of
+	 * https://stackoverflow.com/questions/13209364/convert-c-crc16-to-java-crc16
+	 */
+	private byte[] calculateChecksum(byte[] data) {
+
+		int crc = 0xFFFF;
+
+		for (int j = 0; j < data.length; j++) {
+			crc = ((crc >>> 8) | (crc << 8)) & 0xffff;
+			crc ^= (data[j] & 0xff);// byte to int, trunc sign
+			crc ^= ((crc & 0xff) >> 4);
+			crc ^= (crc << 12) & 0xffff;
+			crc ^= ((crc & 0xFF) << 5) & 0xffff;
+		}
+		crc &= 0xffff;
+
+		return ByteBuffer.allocate(2).putInt(crc).array();
+
 	}
 	
 	public static byte[] convertObjectToByteArray(Object packet) throws IOException {
