@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.BitSet;
 
+import p2mp.shared.Packet;
+
 public class ListenAcks implements Runnable {
 
 	protected DatagramSocket socket;
@@ -35,7 +37,7 @@ public class ListenAcks implements Runnable {
 				BitSet packetType = BitSet.valueOf(ackResponse.packetType);
 
 				if (packetType.equals(SendFiles.ACK_PACKET)) {
-					int ackNo = Integer.valueOf(ByteBuffer.allocate(ackResponse.sequenceNo.length).getInt());
+					int ackNo = Integer.valueOf(ByteBuffer.wrap(ackResponse.sequenceNo).getInt());
 
 					String serverName = response.getAddress().getHostAddress();
 

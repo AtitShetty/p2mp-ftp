@@ -19,6 +19,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import p2mp.shared.Packet;
+
 public class SendFiles implements Runnable {
 
 	protected static Map<Integer, Set<String>> ackMap = Collections
@@ -89,6 +91,7 @@ public class SendFiles implements Runnable {
 	public void run() {
 
 		System.out.println("SendFiles thread started");
+		System.out.println(Paths.get(this.fileName).toString());
 		try {
 			FileInputStream is = new FileInputStream(Paths.get(this.fileName).toString());
 			byte[] buffer = new byte[this.mss];
@@ -134,7 +137,6 @@ public class SendFiles implements Runnable {
 	private void sendPacketsToServers(byte[] data, int segmentNo) throws IOException {
 
 		System.out.println("Sending packet: " + segmentNo);
-
 		byte[] segmentNumber = ByteBuffer.allocate(4).putInt(segmentNo).array();
 		byte[] packetType = DATA_PACKET.toByteArray();
 		byte[] checksum = calculateChecksum(data);
@@ -168,7 +170,8 @@ public class SendFiles implements Runnable {
 		}
 		crc &= 0xffff;
 
-		return ByteBuffer.allocate(2).putInt(crc).array();
+
+		return ByteBuffer.allocate(4).putInt(crc).array();
 
 	}
 

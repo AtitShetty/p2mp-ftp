@@ -1,4 +1,4 @@
-package ip_p2mp_ftp.server;
+package p2mp.shared;
 
 import java.io.Serializable;
 
@@ -17,15 +17,15 @@ public class Packet implements Serializable {
 
 	public byte[] data;
 
-	public Packet(byte[] sequenceNo, byte[] checksum, byte[] packetType) {
+	public Packet(byte[] sequenceNo, byte[] checksum, byte[] packetType, byte[] data) {
 		this.sequenceNo = sequenceNo;
 		this.checksum = checksum;
 		this.packetType = packetType;
-		//this.data = data;
+		this.data = data;
 	}
 
 	public Packet() {
-		this(new byte[4], new byte[2], new byte[2]);
+		this(new byte[4], new byte[2], new byte[2], new byte[500]);
 	}
 
 }

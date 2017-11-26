@@ -1,4 +1,4 @@
-package p2mp.client;
+package p2mp.shared;
 
 import java.io.Serializable;
 

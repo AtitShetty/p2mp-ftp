@@ -1,8 +1,7 @@
-package ip_p2mp_ftp.server;
+package p2mp.server;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,53 +12,101 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.BitSet;
+
+import p2mp.shared.Packet;
 
 public class Server extends Thread {
 	private DatagramSocket socket;
 	private InetAddress address;
 	private int port;
 	private static double p;
-	private String curSequence;
+	private int curSequence = -1;
 	private String nextSequence;
-	private static final String ACK_PACKET = "1010101010101010";
-	private static final String DATA_PACKET = "0101010101010101";
-	private static final String ACK_CHECKSUM = "0000000000000000";
+	public static final BitSet DATA_PACKET = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -1458577492519184881L;
+
+		/**
+		 * 
+		 */
+
+
+		{
+			set(0);
+			set(2);
+			set(4);
+			set(6);
+			set(8);
+			set(10);
+			set(12);
+			set(14);
+		}
+	};
+
+	public static final BitSet ACK_PACKET = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -5394736956744448951L;
+
+		/**
+		 * 
+		 */
+
+
+		{
+			set(1);
+			set(3);
+			set(5);
+			set(7);
+			set(9);
+			set(11);
+			set(13);
+			set(15);
+		}
+	};
+	private static final BitSet ACK_CHECKSUM = new BitSet(16);
 	protected String fileName;
 
 	public Server(int port, String fileName, double p) throws SocketException {
 		this.port = port;
-		socket = new DatagramSocket(port);
+		this.socket = new DatagramSocket(port);
 		this.fileName = fileName;
 		this.p = p;
 	}
 
 	public void run() {
 
-
+		System.out.println("Server thread started");
+		System.out.println(this.socket.getLocalAddress());
+		System.out.println(this.socket.getLocalPort());
 		while (true) {
 			try {
 				byte[] buffer = new byte[2048];
 				DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+
 				this.socket.receive(packet);
-				address = packet.getAddress();
-				port = packet.getPort();
 				double r = Math.random();
-				if (r > p) {
+				// if (r > p) {
 					rcv_data(packet);
-				}
+				// }
 			} catch (Exception e) {
 				System.out.println(e.getMessage());
 			}
 		}
 	}
 
-	private void send_ack() {
+	private void send_ack(InetAddress address, int port) {
 		try {
 			System.out.println("Sending ack....");
-			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(Integer.parseInt(curSequence, 2)).array();
-			byte[] chksum = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_CHECKSUM, 2)).array();
-			byte[] packetType = ByteBuffer.allocate(2).putShort(Short.parseShort(ACK_PACKET, 2)).array();
-			Packet ack = new Packet(sequenceNo, chksum, packetType);
+			byte[] sequenceNo = ByteBuffer.allocate(4).putInt(curSequence).array();
+			byte[] chksum = ACK_CHECKSUM.toByteArray();
+			byte[] packetType = ACK_PACKET.toByteArray();
+			Packet ack = new Packet(sequenceNo, chksum, packetType, null);
 			byte[] send_ack = convertObjectToByteArray(ack);
 			DatagramPacket sendack = new DatagramPacket(send_ack, send_ack.length, address, port);
 			socket.send(sendack);
@@ -70,28 +117,36 @@ public class Server extends Thread {
 
 	private void rcv_data(DatagramPacket packet) {
 		try {
-			System.out.println("Receiving data....");
+			System.out.println("Receiving data");
 			Packet filepacket = (Packet) convertByteArrayToObject(packet.getData());
-
-			if (new String(filepacket.sequenceNo).equals(curSequence)) {
-				send_ack();
+			InetAddress clientAddress = packet.getAddress();
+			int clientPort = packet.getPort();
+			System.out.println("received seq is"
+					+ ByteBuffer.wrap(filepacket.sequenceNo).getInt());
+			if (ByteBuffer.wrap(filepacket.sequenceNo).getInt() == curSequence) {
+				send_ack(clientAddress, clientPort);
 				return;
 			}
 
-			Short packetType = Short.valueOf(ByteBuffer.allocate(filepacket.packetType.length).getShort());
-			Short datatype = Short.parseShort(DATA_PACKET);
-			if (packetType == datatype) {
+			BitSet packetType = BitSet.valueOf(filepacket.packetType);
+			System.out.println(packetType.toString());
+			System.out.println(DATA_PACKET.toString());
+			if (packetType.equals(DATA_PACKET)) {
+				System.out.println("packetType matched");
 				String checkChk = new String(calculateChecksum(filepacket.data));
-				String Chk = new String(filepacket.checksum);
-				if (Chk.equals(checkChk)) {
-					curSequence = new String(filepacket.sequenceNo);
+				String chk = new String(filepacket.checksum);
+				if (chk.equals(checkChk)) {
+					System.out.println("checksum");
+					curSequence = ByteBuffer.wrap(filepacket.sequenceNo).getInt();
+					System.out.println("now sequenc is " + curSequence);
 					FileOutputStream os = new FileOutputStream(Paths.get(this.fileName).toString());
 					os.write(filepacket.data);
-					send_ack();
+					send_ack(clientAddress, clientPort);
+					os.close();
 				}
 			}
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
+			System.out.println("exception in rcv" + Arrays.toString(e.getStackTrace()));
 		}
 	}
 
@@ -112,7 +167,7 @@ public class Server extends Thread {
 		}
 		crc &= 0xffff;
 
-		return ByteBuffer.allocate(2).putInt(crc).array();
+		return ByteBuffer.allocate(4).putInt(crc).array();
 
 	}
 

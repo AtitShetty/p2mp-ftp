@@ -1,6 +1,7 @@
-package ip_p2mp_ftp.server;
+package p2mp.server;
 
-import java.net.SocketException;
+import java.io.File;
+import java.nio.file.Paths;
 
 public class Main {
 	public static void main(String[] args) throws Exception {
@@ -12,7 +13,14 @@ public class Main {
 			throw new Exception("Check input format");
 		}
 
+
+		File dest = new File(Paths.get(args[2]).toString());
+		dest.createNewFile();
 		Server server = new Server(Integer.parseInt(args[1]), args[2], Double.parseDouble(args[3]));
 		server.start();
 	}
+
+
+
+
 }
