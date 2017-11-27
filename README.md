@@ -16,6 +16,8 @@ You will find the code inside ``` src/main/java ``` directory of respective proj
 
 There is a ``` Main.java ``` that will start the java application and perform respective tasks.
 
+All the applications will close once a file has been successfully sent/ received.
+
 ### About Client
 
 - The ``` Main.java ``` will start two threads. Thread of class ``` SendFiles ``` , will send the file provided by CLI as packets of length MSS and some headers.
@@ -23,7 +25,8 @@ There is a ``` Main.java ``` that will start the java application and perform re
 - Meanwhile another thread of class ``` ListenAcks ``` will monitor response received from servers. If it encounters ACK packets, it will check if this ACK is the required ACK. Once all the ACKs from all the servers has been received, it will interrupt ``` SendFiles ``` thread noticing that ACKs has been received and it can send another packet.
 - If all the ACKs were not recieved before timeout, ``` SendFiles ``` will send the same packet to servers that have not send their ACK.
 - Once all the ACKs are received, this Thread will stop, indicating end of transaction.
-- The timeout is decided dynamically by calculating the RTT of all the servers. It is 25% more than the average of the RTT or 100 ms, whichever is higher.
+- The timeout is decided dynamically by calculating the RTT of all the servers. This is done by sending packet of type "RTT" between servers and client. Timeout is 25% more than the average of all the RTTs or 100 ms, whichever is higher.
+- A packet of type "EOF" is sent by client to mark end of file transmission.
 
 ### About Server
 
@@ -31,6 +34,7 @@ There is a ``` Main.java ``` that will start the java application and perform re
 - If the packet is of type DATA, it will check the probability of dropping the packet.
 - If the packet is not dropped, then the data from this packet is saved in the specified file using ``` FileOutputStream ``` .
 - Once the file is successfully saved, it will send an ACK to the sender.
+- "EOF" is acknowledged by sending "EOF" packet back to client.
 
 ### About Packet Format
 
