@@ -84,6 +84,24 @@ public class SendFiles implements Runnable {
 		}
 	};
 
+	public static final BitSet EOF = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -1075747658132666370L;
+
+		{
+			set(0);
+			set(1);
+			set(2);
+			set(3);
+			set(4);
+			set(5);
+			set(6);
+			set(7);
+		}
+	};
+
 	protected DatagramSocket socket;
 
 	protected String fileName;
@@ -155,6 +173,14 @@ public class SendFiles implements Runnable {
 			System.out.println("File " + this.fileName + " of size " + fileSize + " bytes sent successfully in "
 					+ Duration.between(start, end).toMillis() + " ms.");
 			is.close();
+
+			Packet eof = new Packet();
+			eof.packetType = EOF.toByteArray();
+			byte[] eofBuf = convertObjectToByteArray(eof);
+
+			for (String s : serverIpAddresses) {
+				this.socket.send(new DatagramPacket(eofBuf, eofBuf.length, InetAddress.getByName(s), this.port));
+			}
 		} catch (Exception e) {
 			System.out
 					.println("Exception while sending file in SendFiles run():\n" + Arrays.toString(e.getStackTrace()));
@@ -289,6 +315,7 @@ public class SendFiles implements Runnable {
 		this.timeout = timeout;
 
 		System.out.println("Timeout is " + timeout);
+		System.out.println();
 	}
 
 }

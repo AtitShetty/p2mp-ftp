@@ -36,6 +36,10 @@ public class ListenAcks implements Runnable {
 
 				BitSet packetType = BitSet.valueOf(ackResponse.packetType);
 
+				if (packetType.equals(SendFiles.EOF)) {
+					break;
+				}
+
 				if (packetType.equals(SendFiles.ACK_PACKET)) {
 					int ackNo = Integer.valueOf(ByteBuffer.wrap(ackResponse.sequenceNo).getInt());
 

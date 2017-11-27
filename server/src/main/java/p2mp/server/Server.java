@@ -87,6 +87,24 @@ public class Server extends Thread {
 		}
 	};
 
+	public static final BitSet EOF = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -1075747658132666370L;
+
+		{
+			set(0);
+			set(1);
+			set(2);
+			set(3);
+			set(4);
+			set(5);
+			set(6);
+			set(7);
+		}
+	};
+
 	private static final BitSet ACK_CHECKSUM = new BitSet(16);
 	protected String fileName;
 
@@ -108,6 +126,14 @@ public class Server extends Thread {
 				DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 				this.socket.receive(packet);
 				Packet recPacket = (Packet) convertByteArrayToObject(packet.getData());
+
+				if (EOF.equals(BitSet.valueOf(recPacket.packetType))) {
+					Packet eof = new Packet();
+					eof.packetType = EOF.toByteArray();
+					byte[] eofBuf = convertObjectToByteArray(eof);
+					this.socket.send(new DatagramPacket(eofBuf, eofBuf.length, packet.getAddress(), packet.getPort()));
+					break;
+				}
 
 				if (RTT_PACKET.equals(BitSet.valueOf(recPacket.packetType))) {
 					Packet rttRespPacket = new Packet();

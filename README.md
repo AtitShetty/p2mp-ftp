@@ -32,6 +32,12 @@ There is a ``` Main.java ``` that will start the java application and perform re
 - If the packet is not dropped, then the data from this packet is saved in the specified file using ``` FileOutputStream ``` .
 - Once the file is successfully saved, it will send an ACK to the sender.
 
+### About Packet Format
+
+- For this project we have created a POJO called as Packet.java. This has fields for headers and data and will be transferred between clients and servers.
+- This will ensure that a protocol is followed for communication by all the nodes and easily maintained in JAVA.
+- All the fields are of byte[] array format, so we can control the length of the packet as per requirement. 
+
 
 ## Installation
 
