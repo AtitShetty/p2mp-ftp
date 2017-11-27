@@ -25,7 +25,7 @@ There is a ``` Main.java ``` that will start the java application and perform re
 - Once all the ACKs are received, this Thread will stop, indicating end of transaction.
 - The timeout is decided dynamically by calculating the RTT of all the servers. It is 25% more than the average of the RTT or 100 ms, whichever is higher.
 
-### About Client
+### About Server
 
 - The ``` Main.java ``` file will start a thread of class ``` Server ``` . This will monitor any 	packets sent to its UDP port.
 - If the packet is of type DATA, it will check the probability of dropping the packet.
