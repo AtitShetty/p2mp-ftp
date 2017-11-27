@@ -37,15 +37,13 @@ public class Main {
 		// System.out.println(Arrays.toString(servers.toArray()));
 		DatagramSocket socket = new DatagramSocket();
 
-		Thread requestThread = new Thread(new SendFiles(socket, fileName, mss, servers, port, 5000));
+		Thread requestThread = new Thread(new SendFiles(socket, fileName, mss, servers, port, 100));
 		requestThread.start();
 		requestThread.join(1);
 
-		Thread responseThread = new Thread(new ListenAcks(socket, requestThread));
-		responseThread.start();
-		responseThread.join(1);
 
-		System.out.println("Both Threads started");
+
+		// System.out.println("Both Threads started");
 	}
 
 

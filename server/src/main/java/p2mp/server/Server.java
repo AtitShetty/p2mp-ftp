@@ -66,6 +66,27 @@ public class Server extends Thread {
 			set(15);
 		}
 	};
+
+	public static final BitSet RTT_PACKET = new BitSet(16) {
+
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -5854752826522617898L;
+
+		{
+			set(8);
+			set(9);
+			set(10);
+			set(11);
+			set(12);
+			set(13);
+			set(14);
+			set(15);
+		}
+	};
+
 	private static final BitSet ACK_CHECKSUM = new BitSet(16);
 	protected String fileName;
 
@@ -87,13 +108,24 @@ public class Server extends Thread {
 				DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 				this.socket.receive(packet);
 				Packet recPacket = (Packet) convertByteArrayToObject(packet.getData());
-				double r = Math.random();
-				if (r > this.p) {
-					rcv_data(packet);
+
+				if (RTT_PACKET.equals(BitSet.valueOf(recPacket.packetType))) {
+					Packet rttRespPacket = new Packet();
+					rttRespPacket.packetType = RTT_PACKET.toByteArray();
+					byte[] response = convertObjectToByteArray(rttRespPacket);
+					this.socket
+							.send(new DatagramPacket(response, response.length,
+							packet.getAddress(), packet.getPort()));
 				} else {
-					System.out.println(
-							"Packet loss, sequence number = " + ByteBuffer.wrap(recPacket.sequenceNo).getInt());
+					double r = Math.random();
+					if (r > this.p) {
+						rcv_data(packet);
+					} else {
+						System.out.println(
+								"Packet loss, sequence number = " + ByteBuffer.wrap(recPacket.sequenceNo).getInt());
+					}
 				}
+
 			} catch (Exception e) {
 				System.out.println("Exception while running server:\n" + Arrays.toString(e.getStackTrace()));
 			}

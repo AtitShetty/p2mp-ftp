@@ -11,6 +11,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
@@ -25,6 +27,8 @@ public class SendFiles implements Runnable {
 
 	protected static Map<Integer, Set<String>> ackMap = Collections
 			.synchronizedMap(new HashMap<Integer, Set<String>>());
+
+	protected Map<String, Long> rttMap = new HashMap<String, Long>();
 
 	public static final BitSet DATA_PACKET = new BitSet(16) {
 		/**
@@ -62,6 +66,24 @@ public class SendFiles implements Runnable {
 		}
 	};
 
+	public static final BitSet RTT_PACKET = new BitSet(16) {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -1075747658132666370L;
+
+		{
+			set(8);
+			set(9);
+			set(10);
+			set(11);
+			set(12);
+			set(13);
+			set(14);
+			set(15);
+		}
+	};
+
 	protected DatagramSocket socket;
 
 	protected String fileName;
@@ -72,7 +94,7 @@ public class SendFiles implements Runnable {
 
 	protected int port;
 
-	protected int timeout;
+	protected long timeout;
 
 	public SendFiles(DatagramSocket socket, String fileName, int mss, Set<String> servers, int port, int timeout) {
 		this.socket = socket;
@@ -92,7 +114,12 @@ public class SendFiles implements Runnable {
 
 		System.out.println("Client started");
 		// System.out.println(Paths.get(this.fileName).toString());
+
 		try {
+			findRTT();
+			Thread responseThread = new Thread(new ListenAcks(socket, Thread.currentThread()));
+			responseThread.start();
+			responseThread.join(1);
 			FileInputStream is = new FileInputStream(Paths.get(this.fileName).toString());
 			byte[] buffer = new byte[this.mss];
 			@SuppressWarnings("unused")
@@ -104,7 +131,7 @@ public class SendFiles implements Runnable {
 			for (String s : servers) {
 				serverIpAddresses.add(InetAddress.getByName(s).getHostAddress());
 			}
-
+			Instant start = Instant.now();
 			while ((remaining = is.read(buffer)) != -1) {
 
 				SendFiles.ackMap.put(segmentNo, Collections.synchronizedSet(new HashSet<String>(serverIpAddresses)));
@@ -123,13 +150,17 @@ public class SendFiles implements Runnable {
 				segmentNo += 1;
 
 			}
+			Instant end = Instant.now();
+			long fileSize = Paths.get(this.fileName).toFile().length();
+			System.out.println("File " + this.fileName + " of size " + fileSize + " bytes sent successfully in "
+					+ Duration.between(start, end).toMillis() + " ms.");
 			is.close();
 		} catch (Exception e) {
 			System.out
 					.println("Exception while sending file in SendFiles run():\n" + Arrays.toString(e.getStackTrace()));
 		} finally {
 			SendFiles.ackMap.clear();
-			System.out.println("File sent successfully.");
+
 		}
 
 	}
@@ -146,6 +177,7 @@ public class SendFiles implements Runnable {
 		byte[] segmentArray = convertObjectToByteArray(segment);
 
 		for (String s : SendFiles.ackMap.get(segmentNo)) {
+
 			DatagramPacket dataPacket = new DatagramPacket(segmentArray, segmentArray.length, InetAddress.getByName(s),
 					this.port);
 			this.socket.send(dataPacket);
@@ -213,6 +245,50 @@ public class SendFiles implements Runnable {
 			}
 		}
 		return obj;
+	}
+
+	private void findRTT() throws IOException {
+		System.out.println("Determining RTT");
+		for (String s : this.servers) {
+
+			Packet request = new Packet();
+			request.packetType = RTT_PACKET.toByteArray().clone();
+			byte[] requestBuf = convertObjectToByteArray(request);
+			DatagramPacket requestPacket = new DatagramPacket(requestBuf, requestBuf.length, InetAddress.getByName(s),
+					this.port);
+			this.socket.send(requestPacket);
+			Instant start = Instant.now();
+
+			DatagramPacket responsePacket = new DatagramPacket(new byte[2048], 2048);
+			this.socket.receive(responsePacket);
+
+			Instant end = Instant.now();
+
+			long rtt = Duration.between(start, end).toMillis();
+
+			System.out.println("RTT of " + s + " is " + rtt + " ms.");
+
+			rttMap.put(s, rtt);
+		}
+		System.out.println();
+		
+		long timeout = this.timeout;
+		
+		long average = 0;
+		
+		for(String s : rttMap.keySet()) {
+			average += rttMap.get(s);
+		}
+		
+		average = average / rttMap.size();
+		
+		if(average > timeout) {
+			timeout = (long)Math.ceil(1.25*average);			
+		}
+		
+		this.timeout = timeout;
+
+		System.out.println("Timeout is " + timeout);
 	}
 
 }
